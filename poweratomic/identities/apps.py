@@ -2,4 +2,6 @@ from django.apps import AppConfig
 
 
 class IdentitiesConfig(AppConfig):
-    name = 'identities'
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'poweratomic.identities'
+    label = 'identities'
