@@ -41,6 +41,7 @@ THIRD_PARTY_APPS = [
 # third-party ones. Habit, Identity, etc. join this list in later chunks.
 LOCAL_APPS = [
     'poweratomic.accounts',
+    'poweratomic.identities',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
