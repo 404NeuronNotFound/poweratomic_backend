@@ -21,4 +21,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/auth/', include('poweratomic.accounts.urls')),
     path('api/identities/', include('poweratomic.identities.urls')),
+    path('api/habits/', include('poweratomic.habits.urls')),
 ]
