@@ -43,6 +43,7 @@ LOCAL_APPS = [
     'poweratomic.accounts',
     'poweratomic.identities',
     'poweratomic.habits',
+    'poweratomic.checkins',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS

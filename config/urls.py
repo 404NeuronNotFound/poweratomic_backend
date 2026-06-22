@@ -22,4 +22,5 @@ urlpatterns = [
     path('api/auth/', include('poweratomic.accounts.urls')),
     path('api/identities/', include('poweratomic.identities.urls')),
     path('api/habits/', include('poweratomic.habits.urls')),
+    path('api/checkins/', include('poweratomic.checkins.urls')),
 ]
