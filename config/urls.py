@@ -23,4 +23,6 @@ urlpatterns = [
     path('api/identities/', include('poweratomic.identities.urls')),
     path('api/habits/', include('poweratomic.habits.urls')),
     path('api/checkins/', include('poweratomic.checkins.urls')),
+    path('api/progress/', include('poweratomic.gamification.urls')),
+    path('api/journal/', include('poweratomic.journals.urls')),
 ]
