@@ -1,7 +1,7 @@
 from rest_framework import generics, permissions
 
-from .models import Habit
-from .serializers import HabitSerializer
+from .models import Habit, HabitStack
+from .serializers import HabitSerializer, HabitStackSerializer
 
 
 class HabitListCreateView(generics.ListCreateAPIView):
@@ -49,3 +49,36 @@ class HabitDetailView(generics.RetrieveUpdateDestroyAPIView):
     def perform_destroy(self, instance):
         instance.is_active = False
         instance.save(update_fields=['is_active'])
+
+
+class HabitStackListCreateView(generics.ListCreateAPIView):
+    """
+    GET  /api/habits/stacks/  - the current user's routines, items nested and ordered
+    POST /api/habits/stacks/  - create a routine + its ordered items in one request
+    """
+ 
+    serializer_class = HabitStackSerializer
+    permission_classes = [permissions.IsAuthenticated]
+ 
+    def get_queryset(self):
+        return HabitStack.objects.filter(user=self.request.user).prefetch_related('items__habit')
+ 
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+ 
+ 
+class HabitStackDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    PATCH  /api/habits/stacks/<id>/  - rename and/or replace the item set
+    DELETE /api/habits/stacks/<id>/  - a REAL delete, unlike Habit - a
+                                        stack has no check-in history of
+                                        its own to lose; the habits inside
+                                        it are untouched.
+    """
+ 
+    serializer_class = HabitStackSerializer
+    permission_classes = [permissions.IsAuthenticated]
+ 
+    def get_queryset(self):
+        return HabitStack.objects.filter(user=self.request.user).prefetch_related('items__habit')
+ 

@@ -55,3 +55,40 @@ class HabitLaw(models.Model):
 
     def __str__(self):
         return f'Laws for {self.habit.title}'
+    
+class HabitStack(models.Model):
+    """
+    A named, ordered routine - "Wake Up -> Drink Water -> Read Notes ->
+    Study" - made up of habits that already exist. Purely organizational:
+    a stack has no completion or scoring logic of its own. Each habit
+    inside it still checks in independently exactly as it already does;
+    this is just a way to group and sequence them.
+    """
+ 
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='habit_stacks', on_delete=models.CASCADE)
+    name = models.CharField(max_length=100)
+    created_at = models.DateTimeField(auto_now_add=True)
+ 
+    class Meta:
+        ordering = ['created_at']
+ 
+    def __str__(self):
+        return f'{self.name} ({self.user})'
+ 
+ 
+class HabitStackItem(models.Model):
+    """One habit's position within a stack. The same habit can appear in
+    several different stacks - just not twice in the same one."""
+ 
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    stack = models.ForeignKey(HabitStack, related_name='items', on_delete=models.CASCADE)
+    habit = models.ForeignKey(Habit, related_name='stack_items', on_delete=models.CASCADE)
+    order = models.PositiveIntegerField(default=0)
+ 
+    class Meta:
+        ordering = ['order']
+        unique_together = ('stack', 'habit')
+ 
+    def __str__(self):
+        return f'{self.stack.name} #{self.order}: {self.habit.title}'

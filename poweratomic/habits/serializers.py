@@ -3,7 +3,7 @@ from rest_framework import serializers
 from poweratomic.checkins.services import compute_habit_stats
 from poweratomic.identities.models import Identity
 
-from .models import Habit, HabitLaw
+from .models import Habit, HabitLaw, HabitStackItem, HabitStack
 
 
 class HabitLawSerializer(serializers.ModelSerializer):
@@ -79,3 +79,64 @@ class HabitSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         data.update(compute_habit_stats(instance))
         return data
+    
+ 
+class HabitStackItemSerializer(serializers.ModelSerializer):
+    habit_title = serializers.CharField(source='habit.title', read_only=True)
+    habit_type = serializers.CharField(source='habit.habit_type', read_only=True)
+ 
+    class Meta:
+        model = HabitStackItem
+        fields = ('id', 'habit', 'habit_title', 'habit_type', 'order')
+        read_only_fields = ('id',)
+ 
+    def validate_habit(self, value):
+        # Same ownership check as Habit.identity - PrimaryKeyRelatedField
+        # only confirms the id exists, not who it belongs to.
+        request = self.context['request']
+        if value.user_id != request.user.id:
+            raise serializers.ValidationError("That habit doesn't belong to you.")
+        return value
+ 
+ 
+class HabitStackSerializer(serializers.ModelSerializer):
+    items = HabitStackItemSerializer(many=True)
+ 
+    class Meta:
+        model = HabitStack
+        fields = ('id', 'name', 'items', 'created_at')
+        read_only_fields = ('id', 'created_at')
+ 
+    def validate_name(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError('Routine name cannot be empty.')
+        return value
+ 
+    def create(self, validated_data):
+        items_data = validated_data.pop('items')
+        stack = HabitStack.objects.create(**validated_data)
+        self._save_items(stack, items_data)
+        return stack
+ 
+    def update(self, instance, validated_data):
+        items_data = validated_data.pop('items', None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+ 
+        if items_data is not None:
+            # Replacing the whole set is the simplest CORRECT way to handle
+            # reordering/adding/removing in one PATCH - diffing old vs new
+            # item-by-item buys nothing here since items have no identity
+            # worth preserving beyond "which habit, what position".
+            instance.items.all().delete()
+            self._save_items(instance, items_data)
+        return instance
+ 
+    def _save_items(self, stack, items_data):
+        for idx, item_data in enumerate(items_data):
+            HabitStackItem.objects.create(
+                stack=stack, habit=item_data['habit'], order=item_data.get('order', idx)
+            )
+ 
