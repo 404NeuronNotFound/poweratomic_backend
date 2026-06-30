@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .serializers import RegisterSerializer, UserSerializer
+from .serializers import ChangePasswordSerializer, RegisterSerializer, UpdateProfileSerializer, UserSerializer
 
 
 class RegisterView(generics.CreateAPIView):
@@ -34,12 +34,29 @@ class RegisterView(generics.CreateAPIView):
 
 class MeView(APIView):
     """
-    GET /api/auth/me/
-    Returns the currently authenticated user - lets the app confirm a
-    stored token is still valid and prefill the profile.
+    GET   /api/auth/me/ - the currently authenticated user
+    PATCH /api/auth/me/ - update display_name/username/email
     """
 
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         return Response(UserSerializer(request.user).data)
+
+    def patch(self, request):
+        serializer = UpdateProfileSerializer(request.user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(UserSerializer(request.user).data)
+
+
+class ChangePasswordView(APIView):
+    """POST /api/auth/change-password/ - {"current_password", "new_password", "new_password2"}"""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = ChangePasswordSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({'detail': 'Password updated.'})
