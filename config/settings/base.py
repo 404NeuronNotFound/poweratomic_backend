@@ -46,6 +46,7 @@ LOCAL_APPS = [
     'poweratomic.checkins',
     'poweratomic.gamification',
     'poweratomic.journals',
+    'poweratomic.pomodoro',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS

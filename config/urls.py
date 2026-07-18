@@ -25,4 +25,5 @@ urlpatterns = [
     path('api/checkins/', include('poweratomic.checkins.urls')),
     path('api/progress/', include('poweratomic.gamification.urls')),
     path('api/journal/', include('poweratomic.journals.urls')),
+    path('api/pomodoro/', include('poweratomic.pomodoro.urls')),
 ]
