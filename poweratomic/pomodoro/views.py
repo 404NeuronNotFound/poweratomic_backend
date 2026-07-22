@@ -1,3 +1,7 @@
+from datetime import timedelta
+
+from django.db.models import Sum
+from django.db.models.functions import TruncDate
 from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
@@ -103,3 +107,60 @@ class PomodoroSessionAbandonView(APIView):
         session.completed_at = timezone.now()
         session.save(update_fields=['status', 'completed_at'])
         return Response(PomodoroSessionSerializer(session).data)
+
+
+class PomodoroStatsView(APIView):
+    """
+    Aggregates completed WORK-phase sessions two ways:
+    - daily: totals for the last 30 days, for a mini-calendar heatmap.
+    - by_habit: all-time totals per linked habit, for a "which habits get
+      the most focus time" breakdown.
+
+    Only phase=WORK, status=COMPLETED sessions count - breaks aren't
+    "focus time", and abandoned sessions didn't actually happen for the
+    full planned duration, so counting planned_duration_seconds only for
+    completed sessions is accurate (no need to track actual elapsed time
+    separately).
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        completed_work = PomodoroSession.objects.filter(
+            user=request.user,
+            phase=PomodoroSession.Phase.WORK,
+            status=PomodoroSession.Status.COMPLETED,
+        )
+
+        window_start = timezone.now() - timedelta(days=30)
+        daily_qs = (
+            completed_work.filter(started_at__gte=window_start)
+            .annotate(day=TruncDate('started_at'))
+            .values('day')
+            .annotate(seconds=Sum('planned_duration_seconds'))
+            .order_by('day')
+        )
+        daily = [
+            {'date': row['day'].isoformat(), 'minutes': round(row['seconds'] / 60)}
+            for row in daily_qs
+        ]
+
+        # All-time, not windowed to a year - "which habits get the most
+        # focus time" is more useful as a lifetime picture than one that
+        # quietly drops older sessions.
+        by_habit_qs = (
+            completed_work.filter(habit__isnull=False)
+            .values('habit_id', 'habit__title')
+            .annotate(seconds=Sum('planned_duration_seconds'))
+            .order_by('-seconds')
+        )
+        by_habit = [
+            {
+                'habit_id': str(row['habit_id']),
+                'habit_title': row['habit__title'],
+                'minutes': round(row['seconds'] / 60),
+            }
+            for row in by_habit_qs
+        ]
+
+        return Response({'daily': daily, 'by_habit': by_habit})
