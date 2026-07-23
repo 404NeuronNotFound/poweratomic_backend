@@ -3,11 +3,9 @@ import uuid
 from django.conf import settings
 from django.db import models
 
-# ASSUMPTION: the habits app exposes its model at `habits.models.Habit`
-# with a UUID primary key (matches the frontend Habit.id: string shape).
-# Confirm against the real habits/models.py - if the app label or model
-# name differs, this import and the FK below are the only things that
-# need to change.
+# Matches the actual project layout confirmed from urls.py
+# (poweratomic.habits.urls) - the habits app lives under the
+# poweratomic package, not as a flat top-level app.
 from poweratomic.habits.models import Habit
 
 
@@ -27,6 +25,13 @@ class PomodoroSettings(models.Model):
     short_break_minutes = models.PositiveSmallIntegerField(default=5)
     long_break_minutes = models.PositiveSmallIntegerField(default=15)
     cycles_before_long_break = models.PositiveSmallIntegerField(default=4)
+
+    # Used by the "Find a time" calendar feature to bound its free-slot
+    # search to reasonable hours (never suggest a 3am study block).
+    # Plain 0-23 hour integers, not DateTimeField/TimeField, since this
+    # is a daily-recurring local-time preference, not a specific instant.
+    day_start_hour = models.PositiveSmallIntegerField(default=7)
+    day_end_hour = models.PositiveSmallIntegerField(default=22)
 
     def __str__(self):
         return f'Pomodoro settings for {self.user}'

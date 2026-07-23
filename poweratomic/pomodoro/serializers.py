@@ -6,7 +6,17 @@ from .models import PomodoroSession, PomodoroSettings
 class PomodoroSettingsSerializer(serializers.ModelSerializer):
     class Meta:
         model = PomodoroSettings
-        fields = ['work_minutes', 'short_break_minutes', 'long_break_minutes', 'cycles_before_long_break']
+        fields = [
+            'work_minutes', 'short_break_minutes', 'long_break_minutes', 'cycles_before_long_break',
+            'day_start_hour', 'day_end_hour',
+        ]
+
+    def validate(self, data):
+        start = data.get('day_start_hour', getattr(self.instance, 'day_start_hour', None))
+        end = data.get('day_end_hour', getattr(self.instance, 'day_end_hour', None))
+        if start is not None and end is not None and start >= end:
+            raise serializers.ValidationError('day_start_hour must be earlier than day_end_hour.')
+        return data
 
 
 class PomodoroSessionSerializer(serializers.ModelSerializer):
