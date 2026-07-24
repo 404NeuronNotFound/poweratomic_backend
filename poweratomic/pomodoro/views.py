@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from django.db.models import Sum
+from django.db.models import Count, Sum
 from django.db.models.functions import TruncDate
 from django.utils import timezone
 from rest_framework import generics, permissions, status
@@ -163,4 +163,28 @@ class PomodoroStatsView(APIView):
             for row in by_habit_qs
         ]
 
-        return Response({'daily': daily, 'by_habit': by_habit})
+        # "Usual focus hour" - the most frequent hour-of-day (0-23) a
+        # work session started, over the last 60 days. Used by the
+        # frontend's time-of-day smart nudge ("you usually focus around
+        # now"). 60 days (not all-time) so this stays responsive to a
+        # genuinely changed routine rather than being anchored to
+        # whatever someone's schedule looked like a year ago.
+        #
+        # CAVEAT: __hour lookups on a DateTimeField are evaluated in
+        # Django's configured TIME_ZONE (a single server-wide setting),
+        # not the individual user's device timezone, which isn't stored
+        # per-session. For a single-timezone user base this is fine; if
+        # users span timezones or travel, this can be off. Flagging
+        # rather than silently getting it wrong - fixing this properly
+        # would mean storing each session's originating timezone, which
+        # isn't currently captured anywhere.
+        sixty_days_ago = timezone.now() - timedelta(days=60)
+        hour_counts = (
+            completed_work.filter(started_at__gte=sixty_days_ago)
+            .values('started_at__hour')
+            .annotate(count=Count('id'))
+            .order_by('-count')
+        )
+        usual_hour = hour_counts[0]['started_at__hour'] if hour_counts else None
+
+        return Response({'daily': daily, 'by_habit': by_habit, 'usual_hour': usual_hour})
