@@ -24,6 +24,12 @@ class HabitListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
+    def get_queryset(self):
+        show_archived = self.request.query_params.get('archived') == 'true'
+        return (
+            Habit.objects.filter(user=self.request.user, is_active=not show_archived)
+            .select_related('law', 'identity')
+        )
 
 class HabitDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
