@@ -14,6 +14,7 @@ from .serializers import (
     PomodoroSettingsSerializer,
 )
 from .services import create_habit_checkin
+from poweratomic.gamification.badges import check_and_award_focus_badges
 
 
 class PomodoroSettingsView(generics.RetrieveUpdateAPIView):
@@ -84,6 +85,13 @@ class PomodoroSessionCompleteView(APIView):
             # Best-effort: a failure or stub result here should never
             # block the session itself from being marked complete.
             checkin_created = create_habit_checkin(request.user, session.habit)
+
+        # Badge check only applies to WORK phases - completing a break
+        # doesn't add to focus time. Best-effort by the same logic as the
+        # check-in bridge above: a badge-awarding failure should never
+        # block the session itself from being marked complete.
+        if session.phase == PomodoroSession.Phase.WORK:
+            check_and_award_focus_badges(request.user)
 
         data = PomodoroSessionSerializer(session).data
         data['checkin_created'] = checkin_created

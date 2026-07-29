@@ -92,3 +92,28 @@ class HabitStackItem(models.Model):
  
     def __str__(self):
         return f'{self.stack.name} #{self.order}: {self.habit.title}'
+
+
+class StackCompletion(models.Model):
+    """
+    A record that a routine was completed start-to-finish (all steps
+    played through in RoutineRunScreen, not exited early). SET_NULL +
+    a denormalized stack_name snapshot, because HabitStackDetailView
+    performs a REAL delete on stacks (unlike Habit, which only archives)
+    - without this, deleting a routine would silently erase the
+    completion history that badges depend on.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='stack_completions', on_delete=models.CASCADE)
+    stack = models.ForeignKey(
+        HabitStack, related_name='completions', on_delete=models.SET_NULL, null=True, blank=True
+    )
+    stack_name = models.CharField(max_length=100)
+    completed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-completed_at']
+
+    def __str__(self):
+        return f'{self.stack_name} completed by {self.user}'
